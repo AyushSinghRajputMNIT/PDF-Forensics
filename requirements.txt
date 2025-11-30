@@ -1,2 +1,15 @@
+numpy
+pandas
+scikit-learn
+scipy
+matplotlib
+python-dotenv
 pikepdf 
 pymupdf
+pdfplumber       
+pdfminer.six
+torch
+seaborn
+pytesseract
+Pillow
+tqdm
