@@ -1,36 +1,37 @@
 # 🕵️ PDF Forgery Detection using Multi-Modal Forensics
 
-### B.Tech Major Project
+### B.Tech CSE Major Project
 
-This project implements an automated **PDF forensics system** that analyzes documents across multiple layers—**structure, text, and images**—to detect potential tampering or forgery.
+This project implements an automated **PDF forensics system** that detects document tampering by analyzing multiple layers of a PDF:
 
-The system is currently implemented as a **research prototype pipeline**, capable of generating a **forgery probability score** along with intermediate forensic insights.
+- 📄 Structural (low-level PDF objects)
+- 📝 Textual (fonts, layout, OCR consistency)
+- 🖼️ Image (visual and compression artifacts)
+
+The system combines these signals using a **fusion model** to produce a **forgery probability score** and classification.
 
 ---
 
 ## 🔍 Problem Statement
 
-Design and implement a system that analyzes a given PDF document and determines whether it has been tampered with or forged.
-
-PDF manipulation can occur at multiple levels:
+Detecting forged or tampered PDFs is challenging because manipulation can occur at multiple levels:
 
 - Structural edits (xref tables, objects, streams)
 - Textual modifications (font changes, alignment issues)
-- Image alterations (edited signatures, stamps, scanned regions)
+- Image alterations (signatures, stamps, scanned regions)
 
-Manual detection is difficult and requires expertise.
-This system automates the process using **multi-modal forensic analysis**.
+This project builds an automated **multi-modal forensic framework** to identify such inconsistencies.
 
 ---
 
 ## 🎯 Objectives
 
-1. Extract and analyze **low-level PDF structural features**
-2. Detect **structural inconsistencies**
-3. Analyze **textual content anomalies**
-4. Analyze **images / page-level renderings**
-5. Combine all signals into a **final forgery probability**
-6. Provide interpretable outputs and intermediate diagnostics
+- Analyze low-level PDF structure
+- Detect textual anomalies and inconsistencies
+- Identify image-level tampering artifacts
+- Combine signals into a final forgery probability
+- Build a dataset and ML model for classification
+- Provide interpretable outputs for analysis
 
 ---
 
@@ -53,152 +54,137 @@ STRUCTURAL      TEXTUAL          IMAGE
 
 ---
 
-## 🧩 Modules Implemented
+## 🧩 Modules
 
-### 1. Structural Analysis
+### 🔹 Structural Analysis
 
-📄 Files:
-
-- `extract_structural_features.py`
-- `analyze_structural_features.py`
-
-#### What it does:
-
-- Parses raw PDF bytes
 - Extracts:
   - XRef tables
   - Object revisions
   - Streams
   - Metadata
-  - Image statistics
 
-#### Detects:
-
-- Multiple `startxref` entries
-- Object revision anomalies
-- Stream length mismatches
-- Metadata inconsistencies
-
-#### Output:
-
-- `sample.pdf.features.json`
-- `structural_output.json`
+- Detects:
+  - Multiple startxref entries
+  - Object inconsistencies
+  - Metadata anomalies
 
 ---
 
-### 2. Textual Analysis
+### 🔹 Textual Analysis
 
-📄 Folder:
+- Extracts text + font info
+- Performs:
+  - Layout analysis
+  - Font entropy detection
+  - OCR comparison (Tesseract)
 
-- `textual_forensics/`
+- Detects:
+  - Font mismatches
+  - Alignment issues
+  - OCR inconsistencies
 
-#### Pipeline:
-
-1. Extract text + font data (PyMuPDF)
-2. Layout analysis (baseline + spacing)
-3. OCR comparison (Tesseract)
-4. Font anomaly detection (sliding window entropy)
-
-#### Detects:
-
-- Font mismatches
-- Alignment anomalies
-- OCR inconsistencies
-- Suspicious font transitions
-
-#### Output:
-
-- Console logs with progress
-- `text_output.json`
-- `highlighted.pdf` (visual annotations)
+**Optimization:** OCR is automatically skipped for large PDFs for performance.
 
 ---
 
-### 3. Image Analysis
+### 🔹 Image Analysis
 
-📄 Folder:
+- Embedded image extraction OR page rendering fallback
+- Techniques:
+  - Error Level Analysis (ELA)
+  - CNN-based scoring
 
-- `image_forensics/`
-
-#### Two Modes:
-
-**A. Embedded Image Analysis**
-
-- Extract images from PDF
-- Apply:
-  - ELA (Error Level Analysis)
-  - CNN-based feature extraction
-
-**B. Page-Level Analysis (Fallback)**
-
-- If no images found:
-  - Render PDF pages as images
-  - Apply same analysis
-
-#### Detects:
-
-- Compression inconsistencies
-- Pixel-level anomalies
-- Visual tampering signals
-
-#### Output:
-
-- `image_output.json`
+- Detects:
+  - Compression artifacts
+  - Visual tampering
 
 ---
 
-### 4. Fusion Model
+### 🔹 Fusion Model
 
-📄 File:
-
-- `fusion_model.py`
-
-#### Combines:
-
-- Structural score
-- Textual score
-- Image score
-
-#### Weighted scoring:
+Combines multi-modal scores:
 
 ```
 Final Score =
-  w1 * Structural +
-  w2 * Textual +
-  w3 * Image
+  0.4 * Structural +
+  0.35 * Textual +
+  0.25 * Image
 ```
 
-#### Output:
+Outputs:
 
-- Final forgery probability
+- Forgery probability
 - Risk category
 
 ---
 
-### 5. Full Pipeline
+### 🔹 Full Pipeline
 
-📄 File:
-
-- `run_full_pipeline.py`
-
-#### Runs complete system:
+File: `run_full_pipeline.py`
 
 ```
-PDF → Structural → Textual → Image → Fusion → Final Output
+PDF → Structural → Textual → Image → Fusion → Output
 ```
 
-#### Output:
+---
 
-- `structural_output.json`
-- `text_output.json`
-- `image_output.json`
-- `final_output.json`
+## 📊 Dataset
+
+A custom dataset was created using:
+
+- Genuine PDFs (real-world documents)
+- Tampered PDFs generated via:
+  - Metadata manipulation
+  - Structural re-saving
+
+### Structure
+
+```
+dataset/
+├── genuine/
+├── tampered/
+├── labels.csv
+```
+
+---
+
+## ⚡ Feature Extraction Pipeline
+
+File: `generate_features.py`
+
+- Runs full pipeline on all PDFs
+- Extracts:
+  - structural_score
+  - text_score
+  - image_score
+  - final_score
+- Saves results incrementally → `features.csv`
+
+### Features
+
+- Resume capability
+- Fault-tolerant execution
+- Large PDF handling (OCR skipped selectively)
+
+---
+
+## 🤖 Machine Learning (Planned / In Progress)
+
+- Models:
+  - Random Forest
+  - XGBoost (optional)
+
+- Goals:
+  - Compare rule-based vs ML performance
+  - Improve accuracy
+  - Reduce false positives
 
 ---
 
 ## ▶️ How to Run
 
-### 1. Install Dependencies
+### 1. Install dependencies
 
 ```bash
 pip install -r requirements.txt
@@ -206,7 +192,7 @@ pip install -r requirements.txt
 
 ---
 
-### 2. Run Full Pipeline
+### 2. Run full pipeline
 
 ```bash
 python run_full_pipeline.py sample.pdf
@@ -214,90 +200,72 @@ python run_full_pipeline.py sample.pdf
 
 ---
 
-### 3. Output Example
+### 3. Generate feature dataset
 
-```
-===== FINAL RESULT =====
-Forgery Probability: 0.24
-Category: MINOR_ANOMALY
+```bash
+python generate_features.py
 ```
 
 ---
 
-## 📊 Sample Outputs
+### 4. Train ML model (optional)
 
-### Structural
-
-- Suspicion Score: 11.2%
-- Category: CLEAN/LOW_RISK
-
-### Textual
-
-```json
-{
-  "baseline_std": 208.73,
-  "ocr_similarity": 0.75,
-  "font_entropy": 0.86
-}
+```bash
+python train_model.py
 ```
 
-### Image
+---
+
+## 📊 Sample Output
 
 ```json
 {
-  "avg_ela_variance": 3.03,
-  "avg_cnn_tamper_prob": 0.16
-}
-```
-
-### Final
-
-```json
-{
-  "forgery_score": 0.24,
+  "structural_score": 0.12,
+  "textual_score": 0.3,
+  "image_score": 0.05,
+  "final_score": 0.24,
   "category": "MINOR_ANOMALY"
 }
 ```
 
 ---
 
-## ⚠️ Current Limitations
+## ⚠️ Limitations
 
-- CNN model not trained specifically for PDF tampering
-- No dataset-based learning yet (rule-based + pretrained models)
-- OCR accuracy may affect results
-- Some anomalies may produce false positives
-- Structural parsing relies partly on regex (not fully robust)
+- CNN not trained specifically for document forensics
+- OCR may introduce noise
+- Some genuine PDFs may appear suspicious (false positives)
+- Limited tampering types (expandable)
 
 ---
 
-## 🚀 Future Work (Next Phase)
+## 🚀 Future Work
 
-- Dataset creation (genuine vs tampered PDFs)
-- Train ML/DL models for:
-  - Structural features
-  - Text anomalies
-  - Image tampering
+- Add text tampering
+- Add image tampering
+- Train domain-specific CNN
+- Improve OCR robustness
+- Add visualization (heatmaps / highlights)
+- Build UI (web/desktop)
+- Explore advanced models (LayoutLM, DocFormer)
 
-- Advanced fusion (XGBoost / Neural Networks)
-- Region-level heatmaps
-- Full UI / application
+---
+
+## 📌 Project Status
+
+| Component           | Status      |
+| ------------------- | ----------- |
+| Structural Analysis | Complete    |
+| Textual Analysis    | Complete    |
+| Image Analysis      | Complete    |
+| Fusion Model        | Complete    |
+| Dataset Creation    | Complete    |
+| Feature Pipeline    | Complete    |
+| ML Training         | In Progress |
 
 ---
 
 ## 👨‍💻 Author
 
-**Ayush Singh Rajput**
+Ayush Singh Rajput  
 B.Tech CSE Major Project
-
----
-
-## 📌 Status
-
-✅ Structural Analysis — Complete
-✅ Textual Analysis — Complete
-✅ Image Analysis — Complete (with fallback)
-✅ Fusion Model — Complete
-✅ Full Pipeline — Working
-
-🟡 Dataset + ML Training — Pending
