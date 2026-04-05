@@ -219,7 +219,7 @@ __marimo__/
 rendered_images/
 extracted_images/
 features.csv
-final_output.csv
+final_output.json
 highlighted.pdf
 image_output.json
 structural_output.json
