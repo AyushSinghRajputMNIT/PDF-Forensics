@@ -6,6 +6,11 @@ from fusion_model import *
 
 PDF_PATH = sys.argv[1]
 
+# Handle optional argument
+is_large = False
+if len(sys.argv) > 2:
+    is_large = sys.argv[2] == "True"
+
 print("\n==============================")
 print(" FULL PDF FORENSICS PIPELINE ")
 print("==============================")
@@ -31,7 +36,7 @@ subprocess.run([
 ])
 
 # Load structural result
-with open("report.json") as f:
+with open("structural_output.json") as f:
     struct_data = json.load(f)
 
 struct_score = struct_data["analysis"]["structural_suspicion_score"] / 100
@@ -42,7 +47,7 @@ struct_score = struct_data["analysis"]["structural_suspicion_score"] / 100
 print("\n[STEP 2] Textual Analysis")
 
 subprocess.run([
-    "python", "run_textual_analysis.py", PDF_PATH
+    "python", "run_textual_analysis.py", PDF_PATH, str(is_large)
 ])
 
 with open("text_output.json") as f:

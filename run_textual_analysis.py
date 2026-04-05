@@ -10,6 +10,10 @@ import time
 
 pdf_path = sys.argv[1]
 
+is_large = False
+if len(sys.argv) > 2:
+    is_large = sys.argv[2] == "True"
+
 print("\n==============================")
 print(" PDF TEXTUAL FORENSICS MODULE ")
 print("==============================")
@@ -23,7 +27,17 @@ spans = extract_text_and_fonts(pdf_path)
 layout_features = analyze_layout(spans)
 
 # Step 3
-ocr_features = run_ocr_analysis(pdf_path, spans)
+if is_large:
+    print("[INFO] Skipping OCR (large PDF)")
+
+    # Provide safe default values
+    ocr_features = {
+        "ocr_similarity": 1.0,
+        "ocr_mismatch_count": 0,
+    }
+
+else:
+    ocr_features = run_ocr_analysis(pdf_path, spans)
 
 # Step 4
 font_features = sliding_window_entropy(spans)
