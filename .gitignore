@@ -214,3 +214,15 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Custom
+rendered_images/
+extracted_images/
+features.csv
+final_output.csv
+highlighted.pdf
+image_output.json
+structural_output.json
+temp_ela.jpg
+text_output.json
+dataset/complete
