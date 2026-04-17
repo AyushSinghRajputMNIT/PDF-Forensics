@@ -10,12 +10,46 @@ import joblib
 # -------------------------------
 df = pd.read_csv("features.csv")
 
+# -------------------------------
+# Balance Dataset (IMPORTANT)
+# -------------------------------
+df_genuine = df[df["label"] == 0]
+df_tampered = df[df["label"] == 1]
+
+print(f"Original -> Genuine: {len(df_genuine)}, Tampered: {len(df_tampered)}")
+
+# Downsample tampered to match genuine
+df_tampered_sampled = df_tampered.sample(len(df_genuine), random_state=42)
+
+# Combine and shuffle
+df_balanced = pd.concat([df_genuine, df_tampered_sampled])
+df = df_balanced.sample(frac=1, random_state=42).reset_index(drop=True)
+
+print(f"Balanced -> Genuine: {sum(df['label']==0)}, Tampered: {sum(df['label']==1)}")
+
 print("Dataset size:", df.shape)
 
+print("\n=== STRUCT SCORE ANALYSIS ===")
+print(df.groupby("label")["struct_score"].mean())
+
 # -------------------------------
-# Features & Labels
+# Features & Labels (UPDATED)
 # -------------------------------
-X = df[["struct_score", "text_score", "image_score"]]
+X = df[
+    [
+        "struct_score",
+        "ocr_similarity",
+        "ocr_error_ratio",
+        "font_anomaly_ratio",
+        "overlap_density",
+        "max_local_overlap",
+        # "overlap_severity",
+        # "ocr_layout_mismatch",
+        # "font_ocr_mix",
+        "tamper_signal",
+    ]
+]
+
 y = df["label"]
 
 # -------------------------------
@@ -28,7 +62,13 @@ X_train, X_test, y_train, y_test = train_test_split(
 # -------------------------------
 # Train Model
 # -------------------------------
-model = RandomForestClassifier(n_estimators=100, class_weight="balanced", random_state=42)
+model = RandomForestClassifier(
+    n_estimators=200,          # 🔥 increased trees
+    class_weight="balanced",   # keep this
+    random_state=42,
+    min_samples_leaf=3,  
+)
+
 model.fit(X_train, y_train)
 
 # -------------------------------
@@ -53,21 +93,7 @@ print(confusion_matrix(y_test, y_pred))
 # --------------------------------
 # Saving Model
 # --------------------------------
-joblib.dump(model, "tamper_model_v1.pkl")
-
-# --------------------------------
-# Rule-based Accuracy
-# --------------------------------
-def rule_based(row):
-    if row["final_score"] >= 0.5:
-        return 1
-    return 0
-
-df["rule_pred"] = df.apply(rule_based, axis=1)
-
-rule_acc = accuracy_score(df["label"], df["rule_pred"])
-
-print("\nRule-Based Accuracy:", round(rule_acc * 100, 2), "%")
+joblib.dump(model, "tamper_model_v3.pkl")
 
 # -------------------------------
 # Feature Importance Plot
@@ -75,6 +101,12 @@ print("\nRule-Based Accuracy:", round(rule_acc * 100, 2), "%")
 importances = model.feature_importances_
 features = X.columns
 
+print("\nFeature Importance:")
+for f, imp in zip(features, importances):
+    print(f"{f}: {round(imp, 3)}")
+
 plt.bar(features, importances)
 plt.title("Feature Importance")
+plt.xticks(rotation=30)
+plt.tight_layout()
 plt.show()
