@@ -218,7 +218,7 @@ __marimo__/
 # Custom
 rendered_pages/
 extracted_images/
-features.csv
+# features.csv
 final_output.json
 highlighted.pdf
 image_output.json
@@ -226,3 +226,6 @@ structural_output.json
 temp_ela.jpg
 text_output.json
 dataset/complete
+progress.docx
+dataset/tampered/*.features.json
+dataset/genuine/*.features.json
