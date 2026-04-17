@@ -8,6 +8,10 @@ import time
 
 pdf_path = sys.argv[1]
 
+# Optional: caller can specify where to write output (for parallel workers).
+# Falls back to the original hardcoded name so existing single-run usage is unchanged.
+output_path = sys.argv[2] if len(sys.argv) > 2 else "image_output.json"
+
 print("\n==============================")
 print(" PDF IMAGE FORENSICS MODULE ")
 print("==============================")
@@ -38,8 +42,8 @@ print(f"⏱ Total Time: {end_time - start_time:.2f} seconds")
 print("\n===== FINAL OUTPUT =====")
 print(json.dumps(features, indent=2))
 
-# SAVE OUTPUT
-with open("image_output.json", "w") as f:
+# SAVE OUTPUT to the path specified by the caller
+with open(output_path, "w") as f:
     json.dump(features, f, indent=2)
 
-print("✔ Saved image output → image_output.json")
+print(f"✔ Saved image output → {output_path}")
