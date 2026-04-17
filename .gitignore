@@ -229,3 +229,6 @@ dataset/complete
 progress.docx
 dataset/tampered/*.features.json
 dataset/genuine/*.features.json
+dataset/new/
+sample_genuine.pdf
+sample_tampered.pdf
