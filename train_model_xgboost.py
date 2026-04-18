@@ -51,6 +51,11 @@ FEATURES = [
 
     "tamper_signal",
     "tamper_ratio",
+    "num_startxref",
+    "objects_with_multiple_revisions",
+    "stream_length_mismatch_count",
+    "metadata_mismatch",
+    "time_gap_seconds",
 ]
 
 X = df[FEATURES].fillna(0)
