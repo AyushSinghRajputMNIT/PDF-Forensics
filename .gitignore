@@ -232,3 +232,4 @@ dataset/genuine/*.features.json
 dataset/new/
 sample_genuine.pdf
 sample_tampered.pdf
+dataset/page_no_script.py
