@@ -14,10 +14,10 @@ OUTPUT_CSV   = "features.csv"
 
 PIPELINE_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "run_full_pipeline.py")
 
-MAX_PAGES   = 20
+MAX_PAGES   = 60
 NUM_WORKERS = 4
 
-# 🔥 Retry config
+# Retry config
 TIMEOUT_SECONDS = 600
 MAX_RETRIES = 2
 
@@ -49,11 +49,19 @@ FEATURE_COLUMNS = [
 
     "tamper_signal",
     "tamper_ratio",
+
+    # Structural
+    "num_startxref",
+    "objects_with_multiple_revisions",
+    "stream_length_mismatch_count",
+    "metadata_mismatch",
+    "time_gap_seconds",
+
+    # Cross-modal
+    "tri_modal_conflict",
 ]
 
 
-# -------------------------------
-# Load labels
 # -------------------------------
 def load_labels():
     labels = {}
@@ -85,13 +93,14 @@ def is_large_pdf(pdf_path):
 
 
 # -------------------------------
-# CORE PIPELINE (single attempt)
+# CORE PIPELINE
 # -------------------------------
 def run_pipeline_once(pdf_path, is_large):
     job_id = uuid.uuid4().hex[:12]
 
     final_output_file = f"final_output_{job_id}.json"
     text_output_file  = f"text_output_{job_id}.json"
+    struct_file = f"{pdf_path}.{job_id}.features.json"
 
     try:
         subprocess.run(
@@ -100,10 +109,7 @@ def run_pipeline_once(pdf_path, is_large):
             check=False
         )
 
-        if not os.path.exists(final_output_file):
-            return None
-
-        if not os.path.exists(text_output_file):
+        if not os.path.exists(final_output_file) or not os.path.exists(text_output_file):
             return None
 
         with open(final_output_file) as f:
@@ -112,7 +118,9 @@ def run_pipeline_once(pdf_path, is_large):
         with open(text_output_file) as f:
             text = json.load(f)
 
+        # -------------------------------
         # Base features
+        # -------------------------------
         struct_score = final_data.get("structural_score", 0)
         image_score  = final_data.get("image_score", 0)
 
@@ -122,19 +130,29 @@ def run_pipeline_once(pdf_path, is_large):
         overlap_density    = text.get("overlap_density", 0)
         max_local_overlap  = text.get("max_local_overlap", 0)
 
-        # Derived
+        # -------------------------------
+        # Derived features
+        # -------------------------------
         overlap_severity    = overlap_density * max_local_overlap
         ocr_layout_mismatch = ocr_error_ratio * overlap_density
         font_ocr_mix        = font_anomaly_ratio * ocr_error_ratio
-        normalized_overlap  = overlap_density / (1 + max_local_overlap)
-        relative_ocr_drop   = 1 - ocr_similarity
 
+        normalized_overlap = overlap_density / (1 + max_local_overlap)
+        relative_ocr_drop  = 1 - ocr_similarity
+
+        # -------------------------------
         # Strong features
+        # -------------------------------
         struct_text_conflict = abs(struct_score - (1 - ocr_similarity))
         image_text_conflict  = abs(image_score - (1 - ocr_similarity))
         ocr_noise_weighted   = ocr_error_ratio * (1 + overlap_density)
         extreme_overlap_flag = 1 if max_local_overlap > 20 else 0
         cleanliness_score    = ocr_similarity * (1 - overlap_density)
+
+        tri_modal_conflict = (
+            abs(struct_score - image_score) +
+            abs(image_score - (1 - ocr_similarity))
+        )
 
         tamper_signal = (
             2.5 * ocr_error_ratio +
@@ -147,6 +165,55 @@ def run_pipeline_once(pdf_path, is_large):
         )
 
         tamper_ratio = tamper_signal / (1 + struct_score + image_score)
+
+        # -------------------------------
+        # Structural features
+        # -------------------------------
+        num_startxref = 0
+        objects_with_multiple_revisions = 0
+        stream_length_mismatch_count = 0
+        metadata_mismatch = 0
+        time_gap_seconds = 0
+
+        if os.path.exists(struct_file):
+            try:
+                with open(struct_file) as f:
+                    struct_json = json.load(f)
+        
+                # Direct field
+                num_startxref = struct_json.get("num_startxref", 0)
+        
+                # Nested
+                objects_with_multiple_revisions = struct_json.get(
+                    "objects", {}
+                ).get("objects_with_multiple_revisions", 0)
+        
+                stream_length_mismatch_count = struct_json.get(
+                    "streams", {}
+                ).get("stream_length_mismatch_count", 0)
+        
+                metadata_mismatch = int(
+                    struct_json.get("metadata_mismatch_creator_producer", False)
+                )
+        
+                # Handle None safely
+                time_gap_seconds = struct_json.get(
+                    "metadata", {}
+                ).get("creation_modification_time_gap_seconds", 0)
+        
+                if time_gap_seconds is None:
+                    time_gap_seconds = 0
+        
+                # -------------------------------
+                # Normalization (VERY IMPORTANT)
+                # -------------------------------
+                time_gap_seconds = min(time_gap_seconds / 86400, 365)  # days
+                num_startxref = min(num_startxref, 10)
+                objects_with_multiple_revisions = min(objects_with_multiple_revisions, 20)
+                stream_length_mismatch_count = min(stream_length_mismatch_count, 50)
+        
+            except Exception as e:
+                print(f"[STRUCT ERROR] {pdf_path}: {e}")
 
         return {
             "struct_score": struct_score,
@@ -172,6 +239,14 @@ def run_pipeline_once(pdf_path, is_large):
 
             "tamper_signal": tamper_signal,
             "tamper_ratio": tamper_ratio,
+
+            "num_startxref": num_startxref,
+            "objects_with_multiple_revisions": objects_with_multiple_revisions,
+            "stream_length_mismatch_count": stream_length_mismatch_count,
+            "metadata_mismatch": metadata_mismatch,
+            "time_gap_seconds": time_gap_seconds,
+
+            "tri_modal_conflict": tri_modal_conflict,
         }
 
     except subprocess.TimeoutExpired:
@@ -182,7 +257,7 @@ def run_pipeline_once(pdf_path, is_large):
         for path in [
             final_output_file,
             text_output_file,
-            f"structural_output_{job_id}.json",
+            struct_file,
             f"image_output_{job_id}.json",
         ]:
             try:
@@ -191,8 +266,6 @@ def run_pipeline_once(pdf_path, is_large):
                 pass
 
 
-# -------------------------------
-# RETRY WRAPPER
 # -------------------------------
 def run_pipeline_with_retry(pdf_path, is_large):
     for attempt in range(MAX_RETRIES + 1):
@@ -248,7 +321,7 @@ def process_all():
     with open(OUTPUT_CSV, "a", newline="") as csv_file:
         writer = csv.writer(csv_file)
 
-        if os.stat(OUTPUT_CSV).st_size == 0:
+        if not os.path.exists(OUTPUT_CSV) or os.stat(OUTPUT_CSV).st_size == 0:
             writer.writerow(["pdf_name"] + FEATURE_COLUMNS + ["label"])
 
         with ProcessPoolExecutor(max_workers=NUM_WORKERS) as executor:
@@ -266,36 +339,6 @@ def process_all():
                 csv_file.flush()
 
     print(f"\n⚠️ Failed files: {len(failed_files)}")
-
-    # -------------------------------
-    # FINAL RETRY (sequential)
-    # -------------------------------
-    if failed_files:
-        print("\n🔁 Retrying failed files sequentially...\n")
-
-        for file in failed_files:
-            pdf_path = None
-
-            for folder in [GENUINE_DIR, TAMPERED_DIR]:
-                path = os.path.join(folder, file)
-                if os.path.exists(path):
-                    pdf_path = path
-                    break
-
-            if pdf_path is None:
-                continue
-
-            features = run_pipeline_with_retry(pdf_path, is_large_pdf(pdf_path))
-
-            if features is None:
-                print(f"[FINAL FAIL] {file}")
-                continue
-
-            with open(OUTPUT_CSV, "a", newline="") as csv_file:
-                writer = csv.writer(csv_file)
-                row = [file] + [features.get(col, 0) for col in FEATURE_COLUMNS] + [labels.get(file, 0)]
-                writer.writerow(row)
-
     print("\n✅ Feature extraction complete.")
 
 
