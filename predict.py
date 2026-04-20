@@ -4,6 +4,7 @@ import uuid
 import subprocess
 import joblib
 import numpy as np
+import pandas as pd
 
 from feature_builder import build_features, features_to_vector
 
@@ -48,12 +49,12 @@ def apply_feature_transforms(features_dict):
 # Risk Level
 # -------------------------------
 def get_risk_level(prob):
-    if prob < 0.3:
-        return "LOW"
-    elif prob < 0.6:
-        return "MEDIUM"
+    if prob < THRESHOLD - 0.1:
+        return("LOW")
+    elif prob < THRESHOLD + 0.1:
+        return("MEDIUM")
     else:
-        return "HIGH"
+        return("HIGH")
 
 
 # -------------------------------
@@ -110,6 +111,122 @@ def domain_explanation(features):
 
     return reasons[:5]  # limit output
 
+def compute_confidence(prob, threshold):
+    if prob >= threshold:
+        # Confidence for TAMPERED
+        return (prob - threshold) / (1 - threshold)
+    else:
+        # Confidence for GENUINE
+        return (threshold - prob) / threshold
+    
+def compute_disagreement_level(d):
+    if d < 0.1:
+        return "LOW"
+    elif d < 0.3:
+        return "MEDIUM"
+    else:
+        return "HIGH"
+    
+def get_final_decision(prob, confidence, disagreement):
+    if confidence < 0.15 or disagreement > 0.3:
+        return "UNCERTAIN"
+
+    return "TAMPERED" if prob > THRESHOLD else "GENUINE"
+
+# -------------------------------
+# Tampering Type Detection (with confidence)
+# -------------------------------
+def detect_tampering_types(features):
+    scores = {
+        "Text Tampering": 0.0,
+        "Image Tampering": 0.0,
+        "Metadata Tampering": 0.0,
+        "Structural Tampering": 0.0
+    }
+
+    # -------------------------------
+    # TEXT TAMPERING
+    # -------------------------------
+    scores["Text Tampering"] += min(features.get("ocr_error_ratio", 0) * 2, 1.0)
+    scores["Text Tampering"] += min(features.get("overlap_density", 0), 1.0)
+    scores["Text Tampering"] += min(features.get("font_anomaly_ratio", 0), 1.0)
+
+    # -------------------------------
+    # IMAGE TAMPERING
+    # -------------------------------
+    scores["Image Tampering"] += min(features.get("image_score_signature", 0), 1.0)
+    scores["Image Tampering"] += min(features.get("image_score_stamp", 0), 1.0)
+    scores["Image Tampering"] += min(features.get("image_score_logo", 0), 1.0)
+    scores["Image Tampering"] += min(features.get("image_score_internal", 0), 1.0)
+    scores["Image Tampering"] += min(features.get("avg_ela_variance", 0), 1.0)
+
+    # -------------------------------
+    # METADATA TAMPERING
+    # -------------------------------
+    if features.get("metadata_mismatch", 0) == 1:
+        scores["Metadata Tampering"] += 1.0
+
+    scores["Metadata Tampering"] += min(features.get("time_gap_seconds", 0) / 10, 1.0)
+
+    # -------------------------------
+    # STRUCTURAL TAMPERING
+    # -------------------------------
+    if features.get("num_startxref", 0) > 1:
+        scores["Structural Tampering"] += 1.0
+
+    scores["Structural Tampering"] += min(features.get("stream_length_mismatch_count", 0), 1.0)
+
+    # -------------------------------
+    # Normalize scores → confidence
+    # -------------------------------
+    max_score = max(scores.values()) if max(scores.values()) > 0 else 1.0
+
+    results = []
+    for k, v in scores.items():
+        conf = round(v / max_score, 3)
+
+        # Filter weak signals
+        if conf > 0.2:
+            results.append({
+                "type": k,
+                "confidence": conf
+            })
+
+    # Sort by confidence
+    results.sort(key=lambda x: x["confidence"], reverse=True)
+
+    return results
+
+def generate_case_summary(types, disagreement_level):
+    if not types:
+        return "No strong tampering signals detected."
+
+    primary = types[0]["type"]
+    summary = f"Primary signal: {primary}"
+
+    if len(types) > 1:
+        secondary = types[1]["type"]
+        summary += f", with supporting evidence of {secondary.lower()}."
+
+    if disagreement_level == "HIGH":
+        summary += " However, high model disagreement suggests uncertain or partial tampering."
+
+    elif disagreement_level == "MEDIUM":
+        summary += " Some model disagreement observed."
+
+    return summary
+
+def get_forensic_verdict(prediction, disagreement_level):
+    if prediction == "GENUINE":
+        return "No significant evidence of tampering"
+
+    if prediction == "TAMPERED" and disagreement_level == "LOW":
+        return "Strong evidence of tampering"
+
+    if prediction == "TAMPERED":
+        return "Moderate evidence of tampering"
+
+    return "Inconclusive evidence of tampering"
 
 # -------------------------------
 # Prediction
@@ -157,7 +274,9 @@ def predict_pdf(pdf_path):
         # 🔥 APPLY SAME TRANSFORM AS TRAINING
         features = apply_feature_transforms(features)
 
-        X = np.array([features_to_vector(features)])
+        # Align features strictly with training
+        vector = [features.get(f, 0) for f in FEATURES]
+        X = pd.DataFrame([vector], columns=FEATURES)
 
         # -------------------------------
         # Ensemble prediction
@@ -170,20 +289,35 @@ def predict_pdf(pdf_path):
             (1 - WEIGHT_XGB) * rf_prob
         )
 
-        prediction = int(combined_prob > THRESHOLD)
+        model_disagreement = abs(rf_prob - xgb_prob)
+        disagreement_level = compute_disagreement_level(model_disagreement)
+        confidence = compute_confidence(combined_prob, THRESHOLD)
+
+        raw_prediction = int(combined_prob > THRESHOLD)
+        final_decision = get_final_decision(combined_prob, confidence, model_disagreement)
 
         # -------------------------------
         # Explanation (domain only)
         # -------------------------------
         explanation = domain_explanation(features)
+        tampering_types = detect_tampering_types(features)
+        case_summary = generate_case_summary(tampering_types, disagreement_level)
+        confidence = abs(combined_prob - THRESHOLD) / max(THRESHOLD, 1 - THRESHOLD)
 
         result = {
             "pdf": os.path.basename(pdf_path),
             "tampering_probability": round(float(combined_prob), 4),
             "rf_probability": round(float(rf_prob), 4),
             "xgb_probability": round(float(xgb_prob), 4),
-            "prediction": "TAMPERED" if prediction == 1 else "GENUINE",
+            "prediction": final_decision,
+            "model_prediction": "TAMPERED" if raw_prediction == 1 else "GENUINE",
             "risk_level": get_risk_level(combined_prob),
+            "confidence": round(confidence, 3),
+            "model_disagreement": round(float(model_disagreement), 4),
+            "disagreement_level": disagreement_level,
+            "tampering_types": tampering_types,
+            "case_summary": case_summary,
+            "forensic_verdict": get_forensic_verdict(final_decision, disagreement_level),
             "explanation": explanation
         }
 
