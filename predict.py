@@ -4,7 +4,6 @@ import uuid
 import subprocess
 import joblib
 import numpy as np
-import shap
 
 from feature_builder import build_features, features_to_vector
 
@@ -14,9 +13,9 @@ from feature_builder import build_features, features_to_vector
 # -------------------------------
 PIPELINE_SCRIPT = "run_full_pipeline.py"
 
-rf_model = joblib.load("rf_model.pkl")
-xgb_model = joblib.load("xgb_model.pkl")
-config = joblib.load("ensemble_config.pkl")
+rf_model = joblib.load("rf_model_with_img.pkl")
+xgb_model = joblib.load("xgb_model_with_img.pkl")
+config = joblib.load("ensemble_config_with_img.pkl")
 
 WEIGHT_XGB = config["weight_xgb"]
 THRESHOLD  = config["threshold"]
@@ -24,9 +23,25 @@ FEATURES   = config["features"]
 
 
 # -------------------------------
-# SHAP Explainer (Tree-based)
+# SAME NORMALIZATION AS TRAINING
 # -------------------------------
-explainer = shap.TreeExplainer(rf_model)
+def apply_feature_transforms(features_dict):
+    log_features = [
+        "overlap_severity",
+        "max_local_overlap",
+        "time_gap_seconds",
+        "stream_length_mismatch_count"
+    ]
+
+    for col in log_features:
+        if col in features_dict:
+            features_dict[col] = np.log1p(features_dict[col])
+
+    # Clip values
+    for k in features_dict:
+        features_dict[k] = np.clip(features_dict[k], -10, 10)
+
+    return features_dict
 
 
 # -------------------------------
@@ -42,44 +57,35 @@ def get_risk_level(prob):
 
 
 # -------------------------------
-# SHAP Explanation
+# Domain Explanation (NO SHAP)
 # -------------------------------
-def shap_explanation(features_vector):
-    shap_values = explainer.shap_values(features_vector)
-
-    values = shap_values[1][0]  # class 1 (tampered)
-
-    contributions = list(zip(FEATURES, values))
-    contributions.sort(key=lambda x: abs(x[1]), reverse=True)
-
-    top = contributions[:5]
-
-    explanation = []
-    for name, val in top:
-        if val > 0:
-            explanation.append(f"{name} increased tampering likelihood")
-        else:
-            explanation.append(f"{name} reduced tampering likelihood")
-
-    return explanation, contributions
-
 def domain_explanation(features):
     reasons = []
 
-    # Structural signals
+    # Structural
     if features["num_startxref"] > 1:
-        reasons.append("Multiple startxref sections (incremental update/tampering)")
+        reasons.append("Multiple startxref sections (possible incremental tampering)")
 
     if features["stream_length_mismatch_count"] > 0:
         reasons.append("Mismatch between declared and actual stream lengths")
 
     if features["metadata_mismatch"] == 1:
-        reasons.append("Metadata inconsistency (creator vs producer)")
+        reasons.append("Metadata inconsistency detected")
 
     if features["time_gap_seconds"] > 1:
         reasons.append("Large creation-modification time gap")
 
-    # OCR / layout signals
+    # Image
+    if features["avg_ela_variance"] > 0.05:
+        reasons.append("High image compression inconsistency (ELA anomaly)")
+
+    if features["image_score_signature"] > 0.5:
+        reasons.append("Suspicious signature region detected")
+
+    if features["image_score_stamp"] > 0.5:
+        reasons.append("Suspicious stamp region detected")
+
+    # Text
     if features["ocr_error_ratio"] > 0.2:
         reasons.append("High OCR error rate")
 
@@ -90,64 +96,20 @@ def domain_explanation(features):
         reasons.append("Font inconsistencies detected")
 
     if features["max_local_overlap"] > 20:
-        reasons.append("Extreme localized overlap")
+        reasons.append("Extreme localized text overlap")
 
-    # Combined signals
-    if features["tamper_signal"] > 2:
-        reasons.append("Strong combined tampering signal")
+    # Combined
+    if features["struct_text_conflict"] > 0.2:
+        reasons.append("Conflict between structure and text layers")
 
-    if features["tri_modal_conflict"] > 1:
-        reasons.append("Conflict across structure, image, and text layers")
+    if features["image_text_conflict"] > 0.2:
+        reasons.append("Conflict between image and text layers")
 
-    return reasons
+    if features["cleanliness_score"] < 0:
+        reasons.append("Low document cleanliness score")
 
-def hybrid_explanation(features, features_vector):
-    shap_exp, contributions = shap_explanation(features_vector)
-    domain_exp = domain_explanation(features)
+    return reasons[:5]  # limit output
 
-    # Convert top SHAP features into set
-    top_shap_features = {name for name, _ in contributions[:7]}
-
-    # Map feature → domain meaning (important!)
-    feature_to_reason = {
-        "num_startxref": "Multiple startxref sections",
-        "stream_length_mismatch_count": "Stream length mismatch",
-        "metadata_mismatch": "Metadata inconsistency",
-        "time_gap_seconds": "Creation-modification time gap",
-        "ocr_error_ratio": "High OCR error",
-        "overlap_density": "High overlap density",
-        "font_anomaly_ratio": "Font anomaly",
-        "max_local_overlap": "Extreme overlap",
-        "tamper_signal": "Strong tampering signal",
-        "tri_modal_conflict": "Cross-layer conflict",
-    }
-
-    aligned_reasons = []
-
-    # Keep domain reasons that align with SHAP-important features
-    for feature, desc in feature_to_reason.items():
-        if feature in top_shap_features:
-            for reason in domain_exp:
-                if desc.lower() in reason.lower():
-                    aligned_reasons.append(reason)
-
-    # Final merge strategy
-    final_explanation = []
-
-    # Priority 1: aligned reasons (best quality)
-    final_explanation.extend(aligned_reasons[:3])
-
-    # Priority 2: remaining SHAP explanations
-    for exp in shap_exp:
-        if len(final_explanation) >= 5:
-            break
-        final_explanation.append(exp)
-
-    # Fallback
-    if not final_explanation:
-        final_explanation = shap_exp[:3]
-
-    return final_explanation
 
 # -------------------------------
 # Prediction
@@ -157,6 +119,7 @@ def predict_pdf(pdf_path):
 
     final_output_file = f"final_output_{job_id}.json"
     text_output_file  = f"text_output_{job_id}.json"
+    image_output_file = f"image_output_{job_id}.json"
     struct_file = f"{pdf_path}.{job_id}.features.json"
 
     try:
@@ -165,7 +128,11 @@ def predict_pdf(pdf_path):
             check=False
         )
 
-        if not os.path.exists(final_output_file) or not os.path.exists(text_output_file):
+        if not (
+            os.path.exists(final_output_file) and
+            os.path.exists(text_output_file) and
+            os.path.exists(image_output_file)
+        ):
             raise Exception("Pipeline failed")
 
         with open(final_output_file) as f:
@@ -174,14 +141,26 @@ def predict_pdf(pdf_path):
         with open(text_output_file) as f:
             text_data = json.load(f)
 
+        with open(image_output_file) as f:
+            image_data = json.load(f)
+
         # -------------------------------
         # Build features
         # -------------------------------
-        features = build_features(final_data, text_data, struct_file)
+        features = build_features(
+            final_data=final_data,
+            text_data=text_data,
+            image_data=image_data,
+            struct_json_path=struct_file
+        )
+
+        # 🔥 APPLY SAME TRANSFORM AS TRAINING
+        features = apply_feature_transforms(features)
+
         X = np.array([features_to_vector(features)])
 
         # -------------------------------
-        # Model prediction
+        # Ensemble prediction
         # -------------------------------
         rf_prob  = rf_model.predict_proba(X)[0][1]
         xgb_prob = xgb_model.predict_proba(X)[0][1]
@@ -194,13 +173,15 @@ def predict_pdf(pdf_path):
         prediction = int(combined_prob > THRESHOLD)
 
         # -------------------------------
-        # SHAP Explanation
+        # Explanation (domain only)
         # -------------------------------
-        explanation = hybrid_explanation(features, X)
+        explanation = domain_explanation(features)
 
         result = {
             "pdf": os.path.basename(pdf_path),
             "tampering_probability": round(float(combined_prob), 4),
+            "rf_probability": round(float(rf_prob), 4),
+            "xgb_probability": round(float(xgb_prob), 4),
             "prediction": "TAMPERED" if prediction == 1 else "GENUINE",
             "risk_level": get_risk_level(combined_prob),
             "explanation": explanation
@@ -212,8 +193,8 @@ def predict_pdf(pdf_path):
         for path in [
             final_output_file,
             text_output_file,
+            image_output_file,
             struct_file,
-            f"image_output_{job_id}.json",
         ]:
             try:
                 os.remove(path)
