@@ -17,17 +17,26 @@ def compute_image_score(image_features):
     if not image_features:
         return 0.0
 
+    noise = image_features.get("avg_noise_residual_score", 0)
+    jpeg  = image_features.get("avg_jpeg_artifact_score", 0)
+    edge  = image_features.get("avg_edge_inconsistency_score", 0)
+    ela   = image_features.get("avg_ela_variance", 0)
+
     score = 0
 
-    if image_features["avg_ela_variance"] > 15:
-        score += 0.4
-    elif image_features["avg_ela_variance"] > 8:
+    if ela > 15:
+        score += 0.3
+    elif ela > 8:
+        score += 0.15
+
+    if noise > 0.15:
+        score += 0.25
+
+    if jpeg > 0.15:
         score += 0.2
 
-    if image_features["avg_cnn_tamper_prob"] > 0.2:
-        score += 0.3
-    elif image_features["avg_cnn_tamper_prob"] > 0.1:
-        score += 0.1
+    if edge > 0.15:
+        score += 0.2
 
     return min(score, 1.0)
 

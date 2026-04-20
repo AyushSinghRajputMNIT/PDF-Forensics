@@ -1,5 +1,6 @@
 import json
 import os
+import numpy as np
 
 
 # -------------------------------
@@ -7,6 +8,11 @@ import os
 # -------------------------------
 FEATURE_COLUMNS = [
     "struct_score",
+    "image_score_signature",
+    "image_score_stamp",    
+    "image_score_logo",      
+    "image_score_internal",
+    "avg_ela_variance",
     "image_score",
 
     "ocr_similarity",
@@ -23,6 +29,8 @@ FEATURE_COLUMNS = [
 
     "struct_text_conflict",
     "image_text_conflict",
+    "image_signature_conflict",
+    "image_internal_conflict",
     "ocr_noise_weighted",
     "extreme_overlap_flag",
     "cleanliness_score",
@@ -45,10 +53,11 @@ FEATURE_COLUMNS = [
 # -------------------------------
 # MAIN FEATURE BUILDER
 # -------------------------------
-def build_features(final_data, text_data, struct_json_path=None):
+def build_features(final_data, text_data, image_data, struct_json_path=None):
     """
     final_data: output of final_output.json
     text_data: output of text_output.json
+    image_data: output of image_output.json
     struct_json_path: path to structural features JSON
     """
 
@@ -56,7 +65,67 @@ def build_features(final_data, text_data, struct_json_path=None):
     # Base Features
     # -------------------------------
     struct_score = final_data.get("structural_score", 0)
-    image_score  = final_data.get("image_score", 0)
+    # -------------------------------
+    # IMAGE FEATURES (FULLY UPDATED)
+    # -------------------------------
+    image_data = image_data or {}
+
+    images = image_data.get("images", [])
+
+    # ---- Global forensic signals ----
+    avg_ela_variance = image_data.get("avg_ela_variance", 0)
+    avg_ela_variance = np.tanh(avg_ela_variance / 500)
+    avg_noise_score  = image_data.get("avg_noise_residual_score", 0)
+    avg_jpeg_score   = image_data.get("avg_jpeg_artifact_score", 0)
+    avg_edge_score   = image_data.get("avg_edge_inconsistency_score", 0)
+
+    # ---- Type-based aggregation ----
+    sig_scores = []
+    stamp_scores = []
+    logo_scores = []
+
+    for img in images:
+        t = img.get("type", "unknown")
+
+        # combine forensic signals per image
+        local_score = (
+            img.get("noise_residual_score", 0) +
+            img.get("jpeg_artifact_score", 0) +
+            img.get("edge_inconsistency_score", 0)
+        ) / 3
+
+        if t == "signature":
+            sig_scores.append(local_score)
+        elif t == "stamp":
+            stamp_scores.append(local_score)
+        elif t == "logo":
+            logo_scores.append(local_score)
+
+    # safe means
+    def safe_mean(lst):
+        return sum(lst) / len(lst) if lst else 0
+
+    image_score_signature = safe_mean(sig_scores)
+    image_score_stamp     = safe_mean(stamp_scores)
+    image_score_logo      = safe_mean(logo_scores)
+
+    # ---- Internal tampering score (global pixel-level)
+    image_score_internal = (
+        1.2 * avg_noise_score +
+        1.0 * avg_jpeg_score +
+        1.1 * avg_edge_score
+    )
+    image_score_internal /= 3.3
+
+    # ---- Final fused image score
+    image_score = (
+        1.3 * image_score_signature +
+        1.0 * image_score_stamp +
+        0.8 * image_score_logo +
+        1.5 * image_score_internal +
+        1.2 * avg_ela_variance
+    )
+    image_score = np.tanh(image_score)
 
     ocr_similarity     = text_data.get("ocr_similarity", 1.0)
     ocr_error_ratio    = text_data.get("ocr_error_ratio", 0)
@@ -78,14 +147,18 @@ def build_features(final_data, text_data, struct_json_path=None):
     # Strong Features
     # -------------------------------
     struct_text_conflict = abs(struct_score - (1 - ocr_similarity))
-    image_text_conflict  = abs(image_score - (1 - ocr_similarity))
+    image_text_conflict = abs(image_score - (1 - ocr_similarity))
+
+    image_signature_conflict = abs(image_score_signature - (1 - ocr_similarity))
+    image_internal_conflict  = abs(image_score_internal - (1 - ocr_similarity))
     ocr_noise_weighted   = ocr_error_ratio * (1 + overlap_density)
     extreme_overlap_flag = 1 if max_local_overlap > 20 else 0
     cleanliness_score    = ocr_similarity * (1 - overlap_density)
 
     tri_modal_conflict = (
         abs(struct_score - image_score) +
-        abs(image_score - (1 - ocr_similarity))
+        abs(image_score_signature - (1 - ocr_similarity)) +
+        abs(image_score_internal - (1 - ocr_similarity))
     )
 
     tamper_signal = (
@@ -95,7 +168,10 @@ def build_features(final_data, text_data, struct_json_path=None):
         1.5 * font_anomaly_ratio +
         2.0 * (1 - ocr_similarity) +
         1.5 * struct_text_conflict +
-        1.0 * image_text_conflict
+        0.8 * image_text_conflict +
+        0.6 * image_signature_conflict +
+        1.2 * image_internal_conflict +
+        0.8 * avg_ela_variance
     )
 
     tamper_ratio = tamper_signal / (1 + struct_score + image_score)
@@ -151,6 +227,11 @@ def build_features(final_data, text_data, struct_json_path=None):
     # -------------------------------
     features = {
         "struct_score": struct_score,
+        "image_score_signature": image_score_signature,
+        "image_score_stamp": image_score_stamp,    
+        "image_score_logo": image_score_logo,      
+        "image_score_internal": image_score_internal,
+        "avg_ela_variance": avg_ela_variance,
         "image_score": image_score,
 
         "ocr_similarity": ocr_similarity,
@@ -167,6 +248,8 @@ def build_features(final_data, text_data, struct_json_path=None):
 
         "struct_text_conflict": struct_text_conflict,
         "image_text_conflict": image_text_conflict,
+        "image_signature_conflict": image_signature_conflict,
+        "image_internal_conflict": image_internal_conflict,
         "ocr_noise_weighted": ocr_noise_weighted,
         "extreme_overlap_flag": extreme_overlap_flag,
         "cleanliness_score": cleanliness_score,

@@ -1,35 +1,46 @@
 import fitz
 import os
+import io
+from PIL import Image
 
-def extract_images(pdf_path, output_dir="extracted_images"):
-    print("\n[1/3] Extracting images from PDF...")
-    os.makedirs(output_dir, exist_ok=True)
-
+def extract_images_with_meta(pdf_path):
     doc = fitz.open(pdf_path)
-    image_paths = []
 
-    total_pages = len(doc)
+    results = []
 
-    for page_index in range(total_pages):
-        page = doc.load_page(page_index)
+    for page_index, page in enumerate(doc):
         images = page.get_images(full=True)
 
-        print(f"   → Processing page {page_index+1}/{total_pages} ({(page_index+1)/total_pages*100:.1f}%)")
-
-        for img_index, img in enumerate(images):
+        for img in images:
             xref = img[0]
+
             base = doc.extract_image(xref)
+            img_bytes = base["image"]
 
-            image_bytes = base["image"]
-            ext = base["ext"]
+            ext = base.get("ext", "png")
 
-            filename = f"page{page_index}_img{img_index}.{ext}"
-            path = os.path.join(output_dir, filename)
+            path = f"tmp_img_{page_index}_{xref}.{ext}"
 
             with open(path, "wb") as f:
-                f.write(image_bytes)
+                f.write(img_bytes)
 
-            image_paths.append(path)
+            rects = page.get_image_rects(xref)
+            img_type = "unknown"
 
-    print(f"   ✔ Extracted {len(image_paths)} images\n")
-    return image_paths
+            if rects:
+                w, h = rects[0].width, rects[0].height
+
+                if w > 200 and h > 80:
+                    img_type = "logo"
+                elif w > h * 2:
+                    img_type = "signature"
+                else:
+                    img_type = "stamp"
+
+            results.append({
+                "path": path,
+                "type": img_type,
+                "source": "embedded"
+            })
+
+    return results

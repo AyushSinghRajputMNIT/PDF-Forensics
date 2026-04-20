@@ -18,7 +18,7 @@ OUTPUT_CSV   = "features.csv"
 PIPELINE_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "run_full_pipeline.py")
 
 MAX_PAGES   = 60
-NUM_WORKERS = 4
+NUM_WORKERS = 1
 
 TIMEOUT_SECONDS = 600
 MAX_RETRIES = 2
@@ -64,6 +64,7 @@ def run_pipeline_once(pdf_path, is_large):
 
     final_output_file = f"final_output_{job_id}.json"
     text_output_file  = f"text_output_{job_id}.json"
+    image_output_file = f"image_output_{job_id}.json"
 
     # 🔥 IMPORTANT: structural file lives alongside PDF
     struct_file = f"{pdf_path}.{job_id}.features.json"
@@ -75,7 +76,7 @@ def run_pipeline_once(pdf_path, is_large):
             check=False
         )
 
-        if not os.path.exists(final_output_file) or not os.path.exists(text_output_file):
+        if (not os.path.exists(final_output_file) or not os.path.exists(text_output_file) or not os.path.exists(image_output_file)) :
             return None
 
         with open(final_output_file) as f:
@@ -84,10 +85,14 @@ def run_pipeline_once(pdf_path, is_large):
         with open(text_output_file) as f:
             text_data = json.load(f)
 
+        with open(image_output_file) as f:
+            image_data = json.load(f)
+
         # 🔥 ALL FEATURE LOGIC MOVED HERE
         features = build_features(
             final_data=final_data,
             text_data=text_data,
+            image_data=image_data,
             struct_json_path=struct_file
         )
 
@@ -101,13 +106,20 @@ def run_pipeline_once(pdf_path, is_large):
         for path in [
             final_output_file,
             text_output_file,
+            image_output_file,
             struct_file,
-            f"image_output_{job_id}.json",
         ]:
             try:
                 os.remove(path)
             except:
                 pass
+        # delete structural_output files
+        for file in os.listdir("."):
+            if file.startswith(f"structural_output_{job_id}"):
+                try:
+                    os.remove(file)
+                except:
+                    pass
 
 
 # -------------------------------
@@ -169,12 +181,9 @@ def process_all():
 
         if write_header:
             writer.writerow(["pdf_name"] + FEATURE_COLUMNS + ["label"])
-
-        with ProcessPoolExecutor(max_workers=NUM_WORKERS) as executor:
-            futures = {executor.submit(process_one, item): item[0] for item in work_items}
-
-            for future in as_completed(futures):
-                file, features = future.result()
+        if NUM_WORKERS == 1:
+            for item in work_items:
+                file, features = process_one(item)
 
                 if features is None:
                     failed_files.append(file)
@@ -183,6 +192,21 @@ def process_all():
                 row = [file] + [features.get(col, 0) for col in FEATURE_COLUMNS] + [labels.get(file, 0)]
                 writer.writerow(row)
                 csv_file.flush()
+        else:
+
+            with ProcessPoolExecutor(max_workers=NUM_WORKERS) as executor:
+                futures = {executor.submit(process_one, item): item[0] for item in work_items}
+
+                for future in as_completed(futures):
+                    file, features = future.result()
+
+                    if features is None:
+                        failed_files.append(file)
+                        continue
+
+                    row = [file] + [features.get(col, 0) for col in FEATURE_COLUMNS] + [labels.get(file, 0)]
+                    writer.writerow(row)
+                    csv_file.flush()
 
     print(f"\n⚠️ Failed files: {len(failed_files)}")
     print("\n✅ Feature extraction complete.")
