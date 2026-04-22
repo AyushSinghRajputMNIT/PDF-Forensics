@@ -1,18 +1,104 @@
-<div class="container">
-  <app-header (fileUploaded)="onFileUpload($event)"></app-header>
+<div class="dashboard">
 
+  <!-- HEADER -->
+  <app-header
+    [loading]="loading"
+    (fileUploaded)="onFileUpload($event)">
+  </app-header>
+
+  <!-- LOADING -->
   @if (loading) {
-    <div class="loader">🔍 Running forensic analysis...</div>
+    <div class="loader">
+      <div class="spinner"></div>
+      <p>Running forensic analysis...</p>
+    </div>
   }
 
+  <!-- ERROR -->
   @if (error) {
-    <div class="error">{{ error }}</div>
+    <div class="error-card">
+      ⚠ {{ error }}
+    </div>
   }
 
-  @if (result) {
-    <!-- <pre>{{ result | json }}</pre>  -->
+  <!-- RESULTS -->
+ <!-- RESULTS UI -->
+@if (result) {
+
+  <!-- NORMAL UI -->
+  <div class="summary-grid">
     <app-summary-cards [result]="result"></app-summary-cards>
-    <app-charts [result]="result"></app-charts>
-    <app-analysis [result]="result"></app-analysis>
-  }
+  </div>
+
+  <div class="main-grid">
+    <div class="large-card">
+      <h2>📊 Analysis Overview</h2>
+    <div class="charts-grid">
+      <app-charts [result]="result"></app-charts>
+    </div>
+    </div>
+    
+
+    <div class="card">
+      <app-analysis [result]="result"></app-analysis>
+    </div>
+  </div>
+
+  <div class="card">
+  <details>
+    <summary>📄 View Raw Output</summary>
+    <pre>{{ result | json }}</pre>
+  </details>
+</div>
+
+  <div class="export-bar">
+    <button (click)="exportPDF()" class="export-btn">
+      ⬇ Export Report PDF
+    </button>
+  </div>
+
+  <!-- RAW EXPORT DOM (ALWAYS PRESENT) -->
+  <div id="report-content" class="export-only">
+
+  <div class="report-header">
+    <h2>🕵️ PDF Forensic Report</h2>
+
+    <p><strong>File:</strong> {{ result?.pdf }}</p>
+    <p><strong>Verdict:</strong> {{ result?.forensic_verdict }}</p>
+    <p><strong>Risk:</strong> {{ result?.risk_level }}</p>
+    <p><strong>Confidence:</strong> {{ result?.confidence }}</p>
+  </div>
+
+  <div class="card">
+    <h3>Summary</h3>
+    <p>{{ result?.case_summary }}</p>
+  </div>
+
+  <div class="card">
+    <h3>Model Comparison</h3>
+    <p>RF: {{ result?.rf_probability }}</p>
+    <p>XGB: {{ result?.xgb_probability }}</p>
+  </div>
+
+  <div class="card">
+    <h3>Tampering Types</h3>
+    <ul>
+      @for (t of result?.tampering_types; track t) {
+        <li>{{ t.type }} — {{ t.confidence }}</li>
+      }
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Explanation</h3>
+    <ul>
+      @for (e of result?.explanation; track e) {
+        <li>{{ e }}</li>
+      }
+    </ul>
+  </div>
+
+</div>
+
+}
 </div>

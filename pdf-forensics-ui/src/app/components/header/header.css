@@ -1,0 +1,149 @@
+.header-container {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 25px;
+  background: #0f172a;
+  border-bottom: 1px solid #1e293b;
+}
+
+/* ===== TITLE AREA ===== */
+.title-bar {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.title {
+  font-size: 40px;
+  font-weight: 700;
+  color: #60a5fa;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+/* ===== UPLOAD AREA ===== */
+.upload-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+/* Upload box */
+.upload-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: #1e293b;
+  border: 1px dashed #475569;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: 0.2s ease;
+  min-width: 260px;
+}
+
+.upload-box:hover {
+  border-color: #60a5fa;
+  background: #0b1220;
+  transform: translateY(-1px);
+}
+
+.icon {
+  font-size: 22px;
+}
+
+.upload-title {
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.upload-subtitle {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* File info */
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+/* Button */
+.file-info button {
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  border: none;
+  padding: 6px 12px;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.file-info button:hover {
+  transform: scale(1.05);
+}
+
+/* ===== STATUS LINE ===== */
+.status-line {
+  margin-top: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* ===== PULSING DOT ===== */
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #64748b;
+}
+
+.dot.active {
+  background: #22c55e;
+  animation: pulse 1.2s infinite;
+  box-shadow: 0 0 8px #22c55e;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.6);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ===== SCANNING TEXT ANIMATION ===== */
+.scan-text::after {
+  content: '';
+  display: inline-block;
+  width: 1ch;
+  animation: dots 1.2s steps(3, end) infinite;
+}
+
+@keyframes dots {
+  0%   { content: ''; }
+  33%  { content: '.'; }
+  66%  { content: '..'; }
+  100% { content: '...'; }
+}

@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef } from '@angular/core';
+import jsPDF from 'jspdf';
 // import { HttpClientModule } from '@angular/common/http';
 
 import { ApiService } from './services/api';
@@ -30,6 +31,8 @@ export class AppComponent {
   result: any = null;
   loading: boolean = false;
   error: string | null = null;
+  processingStage: string = 'IDLE';
+  isExporting = false;
 
   constructor(private api: ApiService, private cdr: ChangeDetectorRef) {}
 
@@ -57,4 +60,5 @@ export class AppComponent {
       }
     });
   }
+  exportPDF(){}
 }

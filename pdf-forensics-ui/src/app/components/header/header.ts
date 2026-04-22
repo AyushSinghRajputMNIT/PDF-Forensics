@@ -1,10 +1,8 @@
-import { Component, EventEmitter, Output } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, EventEmitter, Output, Input } from '@angular/core';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule],
   templateUrl: './header.html',
   styleUrls: ['./header.css']
 })
@@ -14,11 +12,25 @@ export class HeaderComponent {
 
   selectedFile: File | null = null;
 
+  @Input() loading: boolean = false;
+  @Input() stage: string = 'IDLE';
+
+  steps: string[] = [
+    "Idle",
+    "Reading PDF structure",
+    "Extracting text & fonts",
+    "Running OCR analysis",
+    "Analyzing images",
+    "Fusing model outputs"
+  ];
+
+  get currentStep(): string {
+    return this.loading ? "Analyzing document..." : "System ready";
+  }
+
   onFileChange(event: any) {
     const file = event.target.files[0];
-    if (file) {
-      this.selectedFile = file;
-    }
+    if (file) this.selectedFile = file;
   }
 
   submit() {

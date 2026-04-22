@@ -1,34 +1,28 @@
-<div class="card">
+<div class="analysis">
 
-  <h3>Case Summary</h3>
-  <p>{{ result.case_summary }}</p>
+  <h2>🧠 Forensic Summary</h2>
+  <p class="summary">{{ result.case_summary }}</p>
 
-  <h3>Forensic Verdict</h3>
-  <p>{{ result.forensic_verdict }}</p>
-
-  <h3>Explanation</h3>
- @if (result) {
-
-  <div class="analysis-section">
-    <h3>Explanation</h3>
-    <ul>
-      @for (item of result.explanation; track $index) {
-        <li>{{ item }}</li>
-      }
-    </ul>
+  <div class="verdict">
+    <strong>Verdict:</strong>
+    <span>{{ result.forensic_verdict }}</span>
   </div>
 
-  <div class="analysis-section">
-    <h3>Tampering Types</h3>
-    <ul>
-      @for (type of result.tampering_types; track $index) {
-        <li>
-          {{ type.type }} ({{ type.confidence }})
-        </li>
-      }
-    </ul>
-  </div>
+  <h3>🔍 Detected Issues</h3>
+  <ul>
+    @for (item of result.explanation; track item) {
+      <li>⚠ {{ item }}</li>
+    }
+  </ul>
 
-}
+  <h3>🧩 Tampering Signals</h3>
+  <div class="types">
+    @for (t of result.tampering_types; track t.type) {
+      <div class="type-card">
+        <span>{{ t.type }}</span>
+        <span>{{ t.confidence }}</span>
+      </div>
+    }
+  </div>
 
 </div>

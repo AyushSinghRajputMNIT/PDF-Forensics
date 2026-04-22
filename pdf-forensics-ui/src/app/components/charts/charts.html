@@ -1,33 +1,55 @@
 <div class="charts">
 
+  <!-- MODEL COMPARISON -->
   <div class="card">
-    <h3>Model Comparison</h3>
+    <div class="info-icon">
+    i
+    <div class="tooltip">
+      This section shows predictions from two independent machine learning models:
+      <ul>
+        <li>Random Forest (RF)</li>
+        <li>XGBoost (XGB)</li>
+      </ul>
+      Each model outputs a probability score between 0 and 1 indicating how likely the PDF is tampered.
+      How to interpret:
+      <ul>
+        <li>Higher value → stronger indication of tampering</li>
+        <li>Lower value → stronger indication of authenticity</li>
+      </ul> 
+      Why two models?
+      We use multiple models to improve robustness and reduce bias from a single algorithm.
+      Differences between RF and XGB help identify uncertain or borderline cases.
+    </div>
+  </div>
+    <h3>📊 Model Comparison</h3>
     @if (barData) {
-  <canvas baseChart
-    [data]="barData"
-    [type]="'bar'">
-  </canvas>
-}
+      <canvas baseChart
+        [data]="barData"
+        [type]="'bar'">
+      </canvas>
+    }
   </div>
 
+  <!-- TAMPERING TYPES -->
   <div class="card">
-    <h3>Tampering Types</h3>
-   @if (radarData) {
-  <canvas baseChart
-    [data]="radarData"
-    [type]="'radar'">
-  </canvas>
-}
+    <h3>🧬 Tampering Types</h3>
+    @if (radarData) {
+      <canvas baseChart
+        [data]="radarData"
+        [type]="'radar'">
+      </canvas>
+    }
   </div>
 
+  <!-- CONFIDENCE -->
   <div class="card">
-    <h3>Confidence</h3>
-   @if (doughnutData) {
-  <canvas baseChart
-    [data]="doughnutData"
-    [type]="'doughnut'">
-  </canvas>
-}
+    <h3>🎯 Confidence</h3>
+    @if (doughnutData) {
+      <canvas baseChart
+        [data]="doughnutData"
+        [type]="'doughnut'">
+      </canvas>
+    }
   </div>
 
 </div>

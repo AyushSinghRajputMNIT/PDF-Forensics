@@ -1,0 +1,40 @@
+.analysis {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.summary {
+  color: #cbd5f5;
+}
+
+.verdict {
+  padding: 10px;
+  background: #334155;
+  border-radius: 8px;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  color: #fca5a5;
+  margin: 5px 0;
+}
+
+/* Tampering Types */
+.types {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.type-card {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #1e293b;
+  border-radius: 8px;
+}
