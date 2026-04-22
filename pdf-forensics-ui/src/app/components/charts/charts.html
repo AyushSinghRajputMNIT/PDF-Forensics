@@ -1,0 +1,33 @@
+<div class="charts">
+
+  <div class="card">
+    <h3>Model Comparison</h3>
+    @if (barData) {
+  <canvas baseChart
+    [data]="barData"
+    [type]="'bar'">
+  </canvas>
+}
+  </div>
+
+  <div class="card">
+    <h3>Tampering Types</h3>
+   @if (radarData) {
+  <canvas baseChart
+    [data]="radarData"
+    [type]="'radar'">
+  </canvas>
+}
+  </div>
+
+  <div class="card">
+    <h3>Confidence</h3>
+   @if (doughnutData) {
+  <canvas baseChart
+    [data]="doughnutData"
+    [type]="'doughnut'">
+  </canvas>
+}
+  </div>
+
+</div>

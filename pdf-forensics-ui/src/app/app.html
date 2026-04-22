@@ -1,0 +1,18 @@
+<div class="container">
+  <app-header (fileUploaded)="onFileUpload($event)"></app-header>
+
+  @if (loading) {
+    <div class="loader">🔍 Running forensic analysis...</div>
+  }
+
+  @if (error) {
+    <div class="error">{{ error }}</div>
+  }
+
+  @if (result) {
+    <!-- <pre>{{ result | json }}</pre>  -->
+    <app-summary-cards [result]="result"></app-summary-cards>
+    <app-charts [result]="result"></app-charts>
+    <app-analysis [result]="result"></app-analysis>
+  }
+</div>

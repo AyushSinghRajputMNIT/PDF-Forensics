@@ -1,0 +1,29 @@
+<div class="grid">
+
+  @if (result) {
+  <div class="cards">
+
+    <div class="card">
+      <h3>Forgery Probability</h3>
+      <p>{{ result.tampering_probability }}</p>
+    </div>
+
+    <div class="card">
+      <h3>Prediction</h3>
+      <p>{{ result.prediction }}</p>
+    </div>
+
+    <div class="card">
+      <h3>Risk Level</h3>
+      <p>{{ result.risk_level }}</p>
+    </div>
+
+    <div class="card">
+      <h3>Confidence</h3>
+      <p>{{ result.confidence }}</p>
+    </div>
+
+  </div>
+}
+
+</div>

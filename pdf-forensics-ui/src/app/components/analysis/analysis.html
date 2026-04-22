@@ -1,0 +1,34 @@
+<div class="card">
+
+  <h3>Case Summary</h3>
+  <p>{{ result.case_summary }}</p>
+
+  <h3>Forensic Verdict</h3>
+  <p>{{ result.forensic_verdict }}</p>
+
+  <h3>Explanation</h3>
+ @if (result) {
+
+  <div class="analysis-section">
+    <h3>Explanation</h3>
+    <ul>
+      @for (item of result.explanation; track $index) {
+        <li>{{ item }}</li>
+      }
+    </ul>
+  </div>
+
+  <div class="analysis-section">
+    <h3>Tampering Types</h3>
+    <ul>
+      @for (type of result.tampering_types; track $index) {
+        <li>
+          {{ type.type }} ({{ type.confidence }})
+        </li>
+      }
+    </ul>
+  </div>
+
+}
+
+</div>
