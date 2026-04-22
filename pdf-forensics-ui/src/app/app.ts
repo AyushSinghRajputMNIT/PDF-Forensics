@@ -21,20 +21,22 @@ import { AnalysisComponent } from './components/analysis/analysis';
     HeaderComponent,
     SummaryCardsComponent,
     ChartsComponent,
-    AnalysisComponent
+    AnalysisComponent,
   ],
   templateUrl: './app.html',
-  styleUrls: ['./app.css']
+  styleUrls: ['./app.css'],
 })
 export class AppComponent {
-
   result: any = null;
   loading: boolean = false;
   error: string | null = null;
   processingStage: string = 'IDLE';
   isExporting = false;
 
-  constructor(private api: ApiService, private cdr: ChangeDetectorRef) {}
+  constructor(
+    private api: ApiService,
+    private cdr: ChangeDetectorRef,
+  ) {}
 
   // 🔥 Triggered from header component
   onFileUpload(file: File) {
@@ -44,21 +46,33 @@ export class AppComponent {
 
     this.api.uploadPDF(file).subscribe({
       next: (res: any) => {
-        console.log("API RESPONSE:", res);  // keep this
+        console.log('API RESPONSE:', res); // keep this
 
         this.result = res;
         this.loading = false;
 
-        this.cdr.detectChanges();   // 🔥 FORCE UI UPDATE
+        this.cdr.detectChanges(); // 🔥 FORCE UI UPDATE
       },
       error: (err) => {
         console.error(err);
         this.error = 'Failed to analyze PDF';
         this.loading = false;
 
-        this.cdr.detectChanges();   // 🔥 also here
-      }
+        this.cdr.detectChanges(); // 🔥 also here
+      },
     });
   }
-  exportPDF(){}
+  exportPDF() {
+    this.api.exportReport(this.result).subscribe((blob: Blob) => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+
+      a.href = url;
+      a.download = `forensic-report-${this.result.pdf}.pdf`;
+
+      a.click();
+
+      window.URL.revokeObjectURL(url);
+    });
+  }
 }
