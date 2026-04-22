@@ -1,0 +1,58 @@
+<div class="cards">
+
+  <div class="card highlight">
+    <h3>Tampering Probability</h3>
+    <div class="big-number">
+      {{ result.tampering_probability * 100 | number:'1.0-1' }}%
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Prediction</h3>
+    <div class="badge" [ngClass]="result.prediction.toLowerCase()">
+      {{ result.prediction }}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="info-icon">
+    i
+    <div class="tooltip">
+      Confidence is computed as a weighted aggregation of:
+
+      <ul>
+        <li>Agreement between RF and XGBoost models</li>
+        <li>Consistency of extracted forensic signals</li>
+        <li>Strength of detected tampering indicators</li>
+        <li>Stability across feature groups (text, metadata, image)</li>
+      </ul>
+
+      Higher confidence = stronger agreement and clearer forensic signals.
+      Lower confidence = conflicting or ambiguous evidence.
+    </div>
+  </div>
+    <h3>Confidence</h3>
+    <div>{{ result.confidence | number:'1.2-2' }}</div>
+  </div>
+
+  <div class="card">
+    <div class="info-icon">
+    i
+    <div class="tooltip">
+      Model disagreement measures the difference between RF and XGBoost predictions.
+
+      High disagreement indicates:
+      <ul>
+        <li>Conflicting model outputs</li>
+        <li>Mixed forensic signals</li>
+        <li>Unstable feature evidence</li>
+      </ul>
+
+      Low disagreement = models agree strongly.
+    </div>
+  </div>
+    <h3>Disagreement</h3>
+    <div>{{ result.model_disagreement | number:'1.2-2' }}</div>
+  </div>
+
+</div>

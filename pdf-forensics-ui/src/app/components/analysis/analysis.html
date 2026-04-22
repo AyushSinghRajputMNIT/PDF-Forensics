@@ -1,0 +1,28 @@
+<div class="analysis">
+
+  <h2>🧠 Forensic Summary</h2>
+  <p class="summary">{{ result.case_summary }}</p>
+
+  <div class="verdict">
+    <strong>Verdict:</strong>
+    <span>{{ result.forensic_verdict }}</span>
+  </div>
+
+  <h3>🔍 Detected Issues</h3>
+  <ul>
+    @for (item of result.explanation; track item) {
+      <li>⚠ {{ item }}</li>
+    }
+  </ul>
+
+  <h3>🧩 Tampering Signals</h3>
+  <div class="types">
+    @for (t of result.tampering_types; track t.type) {
+      <div class="type-card">
+        <span>{{ t.type }}</span>
+        <span>{{ t.confidence }}</span>
+      </div>
+    }
+  </div>
+
+</div>

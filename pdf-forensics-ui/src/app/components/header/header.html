@@ -1,0 +1,46 @@
+<div class="header-container">
+
+  <!-- TITLE + LIVE STATUS -->
+  <div class="title-bar">
+
+    <h1 class="title glow">
+      🕵️ PDF FORENSIC ENGINE
+    </h1>
+
+    <div class="status-line">
+      <span class="dot" [class.active]="loading"></span>
+
+      @if (!loading) {
+        <span>System Idle</span>
+      }
+
+      @if (loading) {
+        <span class="scan-text">Analyzing document...</span>
+      }
+    </div>
+
+  </div>
+
+  <!-- UPLOAD AREA -->
+  <div class="upload-bar">
+
+    <input type="file" id="fileInput" (change)="onFileChange($event)" hidden />
+
+    <label for="fileInput" class="upload-box">
+      <div class="icon">📄</div>
+      <div>
+        <div class="upload-title">Upload PDF</div>
+        <div class="upload-subtitle">Click or drag file</div>
+      </div>
+    </label>
+
+    @if (selectedFile) {
+      <div class="file-info">
+        <span>📎 {{ selectedFile.name }}</span>
+        <button (click)="submit()">Analyze</button>
+      </div>
+    }
+
+  </div>
+
+</div>
