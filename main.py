@@ -31,6 +31,8 @@ async def predict(file: UploadFile = File(...)):
 
     try:
         result = predict_pdf(file_path)
+
+        result["pdf"] = file.filename   # 👈 override with original name
         return result
 
     finally:
