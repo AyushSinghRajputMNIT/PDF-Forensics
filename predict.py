@@ -238,6 +238,7 @@ def predict_pdf(pdf_path):
     text_output_file  = f"text_output_{job_id}.json"
     image_output_file = f"image_output_{job_id}.json"
     struct_file = f"{pdf_path}.{job_id}.features.json"
+    struct_output_file = f"structural_output_{job_id}.json"
 
     try:
         subprocess.run(
@@ -329,6 +330,7 @@ def predict_pdf(pdf_path):
             text_output_file,
             image_output_file,
             struct_file,
+            struct_output_file
         ]:
             try:
                 os.remove(path)
