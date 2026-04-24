@@ -2,43 +2,40 @@
 
 ### B.Tech CSE Major Project
 
-This project implements a **production-grade PDF forensics system** that detects document tampering using **multi-modal analysis + machine learning + explainability**.
+This project implements a production-grade PDF forensic analysis system that detects document tampering using:
 
-It analyzes PDFs across multiple layers:
-
-- 📄 Structural (low-level PDF internals)
-- 📝 Textual (OCR, fonts, layout consistency)
-- 🖼️ Image (forensic signal analysis — no CNN)
-- 🤖 ML Model (learned patterns from engineered features)
-- 🧠 Explainability (SHAP + domain insights)
+- Multi-modal forensic analysis
+- Machine Learning (Random Forest + XGBoost Ensemble)
+- Domain-based explainability (NO SHAP)
+- Backend PDF report generation
 
 ---
 
 ## 🔍 Problem Statement
 
-PDF forgery detection is difficult because manipulation can occur across different layers:
+PDF tampering can occur across multiple layers:
 
-- Structural edits (xref tables, object revisions, streams)
-- Textual inconsistencies (font changes, layout mismatch)
-- Image tampering (signatures, stamps, scanned edits)
+- Structural (PDF internals)
+- Textual (OCR, fonts, layout)
+- Image (compression artifacts, edits)
+- Metadata (timestamps, inconsistencies)
 
-This project builds a **multi-modal forensic pipeline + ML classifier** to automatically detect such anomalies and produce:
+Traditional tools fail to detect cross-layer inconsistencies.
 
-- ✔ Forgery probability
-- ✔ Risk level
-- ✔ Human-readable explanation
+This project builds a multi-modal forensic pipeline + ML system to detect such tampering and generate interpretable reports.
 
 ---
 
 ## 🎯 Objectives
 
-- Analyze low-level PDF structure
-- Detect OCR and layout inconsistencies
-- Identify image-level tampering artifacts
-- Engineer strong forensic features
-- Train ML models (RF + XGBoost)
-- Provide **industry-level explainability (SHAP + domain logic)**
-- Generate **forensic PDF reports with charts**
+- Detect structural anomalies in PDFs
+- Identify textual inconsistencies using OCR
+- Detect image tampering using forensic signals (no CNN)
+- Build strong engineered features
+- Train ML models (Random Forest + XGBoost)
+- Use ensemble with threshold tuning
+- Provide clear forensic explanations (domain-based)
+- Generate professional PDF reports
 
 ---
 
@@ -48,18 +45,18 @@ This project builds a **multi-modal forensic pipeline + ML classifier** to autom
 INPUT PDF
    │
    ├── Structural Analysis
-   ├── Textual Analysis
-   ├── Image Forensics (Signal-based)
+   ├── Textual Analysis (OCR + Fonts)
+   ├── Image Analysis (Signal-based: Noise + JPEG + Edge)
    │
    └── Feature Builder
             │
-      ML Models (RF + XGB)
+    ML Models (RF + XGoost)
             │
-   Probability + Risk + Confidence
+     Ensemble Decision
             │
-   Explainability Engine (SHAP + Rules)
+Explainability Engine (SHAP + Rules)
             │
-        Final Output + Report
+   API + UI + PDF Report
 ```
 
 ---
@@ -68,169 +65,74 @@ INPUT PDF
 
 ### 🔹 Structural Analysis
 
-Extracts deep PDF internals:
-
-- XRef tables
-- Object revisions
-- Stream consistency
-- Metadata consistency
-
 Detects:
 
-- Multiple `startxref`
-- Object version conflicts
+- Multiple startxref
 - Stream length mismatches
 - Metadata inconsistencies
+- Time gap anomalies
 
-📌 **Strongest tampering signal**
+Strongest tampering signal.
 
 ---
 
 ### 🔹 Textual Analysis
 
-- Extracts embedded text + fonts
-- Performs OCR using Tesseract
-- Compares OCR vs embedded text
+- OCR using Tesseract
+- Font and layout extraction
 
 Detects:
 
 - OCR mismatch
 - Font anomalies
+- Text overlap
 - Layout inconsistencies
-- Overlapping text
-
-📌 OCR skipped for large PDFs for performance
 
 ---
 
-### 🔹 Image Forensics (NEW — No CNN)
+### 🔹 Image Forensics (No CNN)
 
-Replaced deep learning CNN with **interpretable forensic signals**
+File: forensic_image_detector.py
 
-File: `forensic_image_detector.py`
+Replaced CNN with deterministic signals:
 
-#### Signals Used:
+1. Noise Residual Analysis
+2. JPEG Artifact Detection
+3. Edge Inconsistency Detection
 
-**1. Noise Residual Analysis**
+Final score:
 
-- Detects unnatural noise patterns
-- Proxy for PRNU inconsistency
+score = 0.4 _ noise + 0.3 _ jpeg + 0.3 \* edge
 
-**2. JPEG Artifact Detection**
-
-- Detects recompression artifacts
-- Uses block-level variance (8x8)
-
-**3. Edge Inconsistency**
-
-- Detects unnatural edge distribution
-- Identifies patch-level irregularities
-
-#### Final Score:
-
-```
-score = 0.4 * noise + 0.3 * jpeg + 0.3 * edge
-```
-
-📌 Benefits:
-
-- No heavy GPU dependency
-- Fully explainable
-- Faster inference
-- More stable for documents
+Fully explainable and lightweight.
 
 ---
 
-### 🔹 Feature Builder (🔥 CORE)
+### 🔹 Feature Builder (Core)
 
-File: `feature_builder.py`
+File: feature_builder.py
 
-#### Feature Categories
+Combines all signals into ML-ready features.
 
-**Base Features**
-
-- struct_score, image_score
-- ocr_similarity, ocr_error_ratio
-
-**Derived Features**
-
-- overlap_severity
-- normalized_overlap
-- relative_ocr_drop
-
-**Strong Features**
-
-- struct_text_conflict
-- image_text_conflict
-- ocr_noise_weighted
-
-**Structural Features**
+Key features:
 
 - num_startxref
-- stream_length_mismatch_count
-- metadata_mismatch
 - time_gap_seconds
-
-**Fusion Features**
-
-- tamper_signal
-- tamper_ratio
+- stream_length_mismatch_count
+- ocr_noise_weighted
+- image_score_signature
 
 ---
 
-### 🔹 Machine Learning Model
+### 🔹 Machine Learning
 
-Models used:
+Models:
 
 - Random Forest
 - XGBoost
+- Ensemble
 
-Why two models?
-
-- Capture different patterns
-- Reduce bias
-- Enable disagreement-based confidence
-
----
-
-### 🔹 Confidence & Disagreement
-
-**Confidence is computed using:**
-
-- Model agreement (RF vs XGB)
-- Signal consistency
-- Feature stability
-- Strength of tampering indicators
-
-**Disagreement:**
-
-```
-|RF - XGB|
-```
-
-📌 High disagreement = uncertain prediction
-
----
-
-### 🔹 Explainability Engine
-
-File: `predict.py`
-
-Includes:
-
-1. **SHAP values** → feature contribution
-2. **Domain logic** → human-readable reasoning
-3. **Hybrid explanation output**
-
-Example:
-
-- HIGH: Multiple xref sections detected
-- MEDIUM: OCR inconsistency
-- LOW: Image anomalies
-
----
-
-## 📊 Dataset
+Dataset:
 
 ```
 dataset/
@@ -239,58 +141,98 @@ dataset/
 ├── labels.csv
 ```
 
-Tampering includes:
-
-- Structural edits
-- Metadata changes
-- Re-saved PDFs
+- Size: 296 samples
+- Features: 34
 
 ---
 
-## ⚡ Feature Extraction Pipeline
+## 🔥 Model Performance
 
-File: `generate_features.py`
-
-- Runs full pipeline
-- Uses `feature_builder.py`
-- Saves to `features.csv`
-
-Supports:
-
-- Resume
-- Parallel execution
-- Retry handling
+| Model         | Accuracy | AUC    |
+| ------------- | -------- | ------ |
+| Random Forest | 88.33%   | 0.9417 |
+| XGBoost       | 85.00%   | 0.9294 |
+| Ensemble      | 93.33%   | 0.9439 |
 
 ---
 
-## 🤖 Model Performance
+## ⚙️ Ensemble Configuration
 
-| Model         | Accuracy |
-| ------------- | -------- |
-| Random Forest | 88.33%   |
-| XGBoost       | 85.00%   |
-
-📌 RF performs best in most cases
+- XGBoost weight: 0.2
+- Threshold: 0.4
 
 ---
 
-## 📄 PDF Report Export (Backend)
+## 🧠 Prediction Logic
 
-Reports include:
+Combined probability:
+combined*prob = (0.2 * XGB) + (0.8 \_ RF)
 
-- File metadata
-- Verdict & risk
-- Confidence score
-- 📊 Charts:
-  - Model comparison (bar)
-  - Confidence (doughnut)
-  - Tampering types (radar)
+Confidence:
+confidence = abs(prob - threshold) / max(threshold, 1 - threshold)
+
+Disagreement:
+abs(RF - XGB)
+
+---
+
+## 🔍 Explainability (Domain-Based)
+
+Example explanations:
+
+- Multiple startxref sections detected
+- Metadata inconsistency detected
+- High OCR error rate
+- Image compression anomaly
+
+---
+
+## 🧬 Tampering Types
+
+- Text Tampering
+- Image Tampering
+- Metadata Tampering
+- Structural Tampering
+
+Each has a confidence score.
+
+---
+
+## 📊 API Endpoints
+
+### Predict
+
+POST /predict
+
+Returns:
+
+- Tampering probability
+- Prediction
+- Confidence
+- Disagreement
+- Tampering types
 - Explanation
-- Raw JSON output
 
 ---
 
-## ▶️ How to Run
+### Export Report
+
+POST /export-report
+
+Returns:
+
+- Downloadable PDF forensic report
+
+Includes:
+
+- Summary
+- Charts
+- Explanation
+- Raw output
+
+---
+
+## 💻 How to Run
 
 ### 1. Install dependencies
 
@@ -330,33 +272,30 @@ http://localhost:4200
 
 ---
 
-### 4. Use the Application
+## 📄 Export Report
 
-1. Upload a PDF
-2. View forensic analysis dashboard
-3. Inspect:
-   - Charts
-   - Confidence
-   - Explanation
-4. Click **Export Report**
-5. Download full forensic PDF report
+1. Upload PDF in UI
+2. View analysis dashboard
+3. Click "Export Report PDF"
+4. Backend generates full forensic report
 
 ---
 
-## 📊 Sample Output
+## 📊 Output Example
 
 ```json
 {
-  "tampering_probability": 0.78,
+  "tampering_probability": 0.91,
+  "rf_probability": 0.88,
+  "xgb_probability": 0.95,
   "prediction": "TAMPERED",
-  "risk_level": "HIGH",
-  "confidence": 0.82,
-  "model_disagreement": 0.12,
-  "tampering_types": [
-    { "type": "Text Tampering", "confidence": 0.9 },
-    { "type": "Metadata Tampering", "confidence": 0.6 }
-  ],
-  "explanation": ["Multiple xref sections detected", "OCR inconsistency found"]
+  "confidence": 0.85,
+  "model_disagreement": 0.07,
+  "tampering_types": [{ "type": "Structural Tampering", "confidence": 0.9 }],
+  "explanation": [
+    "Multiple startxref sections detected",
+    "Stream mismatch detected"
+  ]
 }
 ```
 
@@ -364,40 +303,38 @@ http://localhost:4200
 
 ## ⚠️ Limitations
 
-- OCR noise in low-quality scans
+- OCR noise possible
 - Dataset size moderate
-- Some borderline false positives
+- Rule-based image detection (no deep learning)
+- Some false positives
 
 ---
 
 ## 🚀 Future Work
 
-- Layout-aware models (LayoutLM)
-- Tamper heatmaps
 - Larger dataset
-- Real-time API scaling
-- Advanced PDF attack detection
+- Advanced layout-aware models
+- Improved visual tamper localization
+- Cloud deployment
 
 ---
 
 ## 📌 Project Status
 
-| Component           | Status            |
-| ------------------- | ----------------- |
-| Structural Analysis | ✅                |
-| Textual Analysis    | ✅                |
-| Image Forensics     | ✅ (signal-based) |
-| Feature Engineering | ✅                |
-| ML Models           | ✅                |
-| Explainability      | ✅                |
-| Frontend UI         | ✅                |
-| PDF Export          | ✅                |
+- Structural Analysis: Done
+- Text Analysis: Done
+- Image Forensics: Done
+- Feature Engineering: Done
+- ML Training: Done
+- Explainability: Done
+- UI Dashboard: Done
+- PDF Export: Done
 
 ---
 
 ## 👨‍💻 Author
 
-**Ayush Singh Rajput**  
+**Ayush Singh Rajput**
 B.Tech CSE (2026), MNIT Jaipur
 
 ---
@@ -407,7 +344,15 @@ B.Tech CSE (2026), MNIT Jaipur
 Evolution:
 
 ```
-Rule-based → Multi-modal → ML → Explainable AI → Production System
+
+Rule-based → Multi-modal → ML → Ensemble → Explainable System
+
 ```
 
-👉 Result: **Robust, interpretable PDF forensic detection system**
+Final Result:
+
+**Production-ready PDF forensic analysis system**
+
+```
+
+```
