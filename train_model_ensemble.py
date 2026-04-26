@@ -105,7 +105,7 @@ rf_val_prob  = rf_model.predict_proba(X_val)[:, 1]
 xgb_val_prob = xgb_model.predict_proba(X_val)[:, 1]
 
 # -------------------------------
-# 🔥 Learn best ensemble weight + threshold
+# Learn best ensemble weight + threshold
 # -------------------------------
 best_acc = 0
 best_w = 0.5
@@ -128,7 +128,7 @@ print(f"🔥 Best Threshold: {round(best_thr, 2)}")
 print(f"Validation Accuracy (Ensemble): {round(best_acc*100,2)}%")
 
 # # -------------------------------
-# # 🔥 Learn best ensemble weight
+# # Learn best ensemble weight
 # # -------------------------------
 # best_acc = 0
 # # best_w = 0.5

@@ -272,7 +272,7 @@ def predict_pdf(pdf_path):
             struct_json_path=struct_file
         )
 
-        # 🔥 APPLY SAME TRANSFORM AS TRAINING
+        # APPLY SAME TRANSFORM AS TRAINING
         features = apply_feature_transforms(features)
 
         # Align features strictly with training

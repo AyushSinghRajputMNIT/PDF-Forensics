@@ -12,7 +12,7 @@ def build_text_features(layout, ocr, font):
     ocr_error_ratio = ocr_mismatch / word_count
 
     # -------------------------------
-    # 🔥 NEW INTERACTION FEATURES
+    # NEW INTERACTION FEATURES
     # -------------------------------
 
     overlap_severity = overlap_density * max_local_overlap
@@ -49,7 +49,7 @@ def build_text_features(layout, ocr, font):
         "ocr_error_ratio": ocr_error_ratio,
 
         # -------------------------------
-        # 🔥 Interaction Features (KEY)
+        # Interaction Features 
         # -------------------------------
         "overlap_severity": overlap_severity,
         "ocr_layout_mismatch": ocr_layout_mismatch,

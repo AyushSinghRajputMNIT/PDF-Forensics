@@ -1,13 +1,3 @@
-#!/usr/bin/env python3
-"""
-Dependencies:
-  pip install pikepdf pymupdf
-
-Usage:
-  python extract_pdf_features.py input.pdf -o features.json
-
-"""
-
 from __future__ import annotations
 import argparse
 import json

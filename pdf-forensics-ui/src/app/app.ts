@@ -38,7 +38,6 @@ export class AppComponent {
     private cdr: ChangeDetectorRef,
   ) {}
 
-  // 🔥 Triggered from header component
   onFileUpload(file: File) {
     this.loading = true;
     this.error = null;
@@ -46,19 +45,19 @@ export class AppComponent {
 
     this.api.uploadPDF(file).subscribe({
       next: (res: any) => {
-        console.log('API RESPONSE:', res); // keep this
+        console.log('API RESPONSE:', res);
 
         this.result = res;
         this.loading = false;
 
-        this.cdr.detectChanges(); // 🔥 FORCE UI UPDATE
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error(err);
         this.error = 'Failed to analyze PDF';
         this.loading = false;
 
-        this.cdr.detectChanges(); // 🔥 also here
+        this.cdr.detectChanges();
       },
     });
   }

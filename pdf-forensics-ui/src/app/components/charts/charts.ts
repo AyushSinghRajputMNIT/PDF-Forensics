@@ -8,10 +8,9 @@ import { ChartConfiguration } from 'chart.js';
   standalone: true,
   imports: [CommonModule, BaseChartDirective],
   templateUrl: './charts.html',
-  styleUrls: ['./charts.css']
+  styleUrls: ['./charts.css'],
 })
 export class ChartsComponent implements OnChanges {
-
   constructor(private cdr: ChangeDetectorRef) {}
 
   @Input() result: any;
@@ -21,33 +20,32 @@ export class ChartsComponent implements OnChanges {
   radarData: ChartConfiguration<'radar'>['data'] | null = null;
   doughnutData: ChartConfiguration<'doughnut'>['data'] | null = null;
 
-  // Chart options (IMPORTANT FIX for label clipping)
   radarOptions: ChartConfiguration<'radar'>['options'] = {
     responsive: true,
     maintainAspectRatio: false,
     layout: {
-      padding: 30   // 🔥 prevents label cutoff
+      padding: 30,
     },
     scales: {
       r: {
         pointLabels: {
           font: {
-            size: 12
+            size: 12,
           },
-          padding: 12  // 🔥 fixes "Image Tampering" clipping
-        }
-      }
-    }
+          padding: 12,
+        },
+      },
+    },
   };
 
   barOptions: ChartConfiguration<'bar'>['options'] = {
     responsive: true,
-    maintainAspectRatio: false
+    maintainAspectRatio: false,
   };
 
   doughnutOptions: ChartConfiguration<'doughnut'>['options'] = {
     responsive: true,
-    maintainAspectRatio: false
+    maintainAspectRatio: false,
   };
 
   ngOnChanges(): void {
@@ -60,13 +58,10 @@ export class ChartsComponent implements OnChanges {
       labels: ['RF', 'XGB'],
       datasets: [
         {
-          data: [
-            this.result.rf_probability,
-            this.result.xgb_probability
-          ],
-          label: 'Model Output'
-        }
-      ]
+          data: [this.result.rf_probability, this.result.xgb_probability],
+          label: 'Model Output',
+        },
+      ],
     };
 
     // -----------------------
@@ -77,9 +72,9 @@ export class ChartsComponent implements OnChanges {
       datasets: [
         {
           data: this.result.tampering_types?.map((t: any) => t.confidence) || [],
-          label: 'Tampering Signals'
-        }
-      ]
+          label: 'Tampering Signals',
+        },
+      ],
     };
 
     // -----------------------
@@ -89,12 +84,9 @@ export class ChartsComponent implements OnChanges {
       labels: ['Confidence', 'Remaining'],
       datasets: [
         {
-          data: [
-            this.result.confidence,
-            1 - this.result.confidence
-          ]
-        }
-      ]
+          data: [this.result.confidence, 1 - this.result.confidence],
+        },
+      ],
     };
 
     // Ensure UI refresh

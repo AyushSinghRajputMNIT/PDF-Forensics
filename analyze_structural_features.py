@@ -1,16 +1,3 @@
-#!/usr/bin/env python3
-"""
-Analyze structural PDF features (produced by extract_structural_features.py)
-and compute a forgery suspicion score plus a human-readable report.
-
-Usage:
-  python analyze_structural_features.py features.json -o structural_output.json --pretty
-
-Output:
-  - JSON report (default: <features>.analysis.json)
-  - printed summary
-
-"""
 from __future__ import annotations
 import argparse
 import json

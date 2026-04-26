@@ -4,7 +4,7 @@ import numpy as np
 
 
 # -------------------------------
-# Feature List (single source of truth)
+# Feature List 
 # -------------------------------
 FEATURE_COLUMNS = [
     "struct_score",
@@ -66,7 +66,7 @@ def build_features(final_data, text_data, image_data, struct_json_path=None):
     # -------------------------------
     struct_score = final_data.get("structural_score", 0)
     # -------------------------------
-    # IMAGE FEATURES (FULLY UPDATED)
+    # IMAGE FEATURES 
     # -------------------------------
     image_data = image_data or {}
 
