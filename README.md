@@ -344,15 +344,9 @@ B.Tech CSE (2026), MNIT Jaipur
 Evolution:
 
 ```
-
 Rule-based → Multi-modal → ML → Ensemble → Explainable System
-
 ```
 
 Final Result:
 
 **Production-ready PDF forensic analysis system**
-
-```
-
-```
