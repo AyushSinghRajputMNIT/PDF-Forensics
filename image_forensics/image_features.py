@@ -26,7 +26,10 @@ def extract_image_features(images_meta):
         print(f" → {i+1}/{len(images_meta)} [{img_type}, {source}]")
 
         # ELA (still useful)
-        ela = compute_ela(path)
+        ela = compute_ela(
+            path,
+            save_path=f"ela_{path}.png"
+        )
 
         # 🔥 forensic components (replacing CNN)
         noise = noise_residual_score(path)
